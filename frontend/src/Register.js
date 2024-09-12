@@ -11,13 +11,12 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Automatically set status and totalcredit
     const userData = {
       email,
       password,
       contact,
-      status: "no status", // Default status
-      totalcredit: 0, // Default total credit
+      status: "no status",
+      totalcredit: 0,
       userType,
     };
 
@@ -62,7 +61,7 @@ const Register = () => {
                 <form
                   onSubmit={handleSubmit}
                   style={{
-                    width: "600px", // Increased width
+                    width: "600px",
                     margin: "0 auto",
                     backgroundColor: "#fff",
                     padding: "20px",
