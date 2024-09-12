@@ -1,20 +1,37 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { isEmail } from "validator";
 
 const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [contact, setContact] = useState("");
   const [userType, setUserType] = useState("Passenger");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!isEmail(email)) {
+      setError("Invalid email format");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long");
+      return;
+    }
+    if (!/^\d+$/.test(contact)) {
+      setError("Contact must be numeric");
+      return;
+    }
+
+    setError("");
+
     const userData = {
-      email,
-      password,
-      contact,
+      email: email.trim(),
+      password: password.trim(),
+      contact: contact.trim(),
       status: "no status",
       totalcredit: 0,
       userType,
@@ -51,83 +68,74 @@ const Register = () => {
       }}
     >
       <div className="container">
-        <section id="contact" className="contact">
-          <div className="container" data-aos="fade-up">
-            <div className="section-title">
-              <h1 style={{ color: "#fff", textAlign: "center" }}>Register</h1>
+        <div
+          style={{
+            width: "600px",
+            margin: "0 auto",
+            backgroundColor: "#fff",
+            padding: "20px",
+            borderRadius: "8px",
+            boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
+          }}
+        >
+          <h1 style={{ color: "#000", textAlign: "center" }}>Register</h1>
+          {error && <p style={{ color: "red" }}>{error}</p>}
+          <form onSubmit={handleSubmit}>
+            <div className="form-group mb-3">
+              <label htmlFor="email">Email</label>
+              <input
+                type="email"
+                placeholder="email"
+                className="form-control"
+                required
+                onChange={(e) => setEmail(e.target.value)}
+                value={email}
+              />
             </div>
-            <div className="row">
-              <div className="col-lg-8 mt-5 mt-lg-0 d-flex align-items-stretch mx-auto">
-                <form
-                  onSubmit={handleSubmit}
-                  style={{
-                    width: "600px",
-                    margin: "0 auto",
-                    backgroundColor: "#fff",
-                    padding: "20px",
-                    borderRadius: "8px",
-                    boxShadow: "0 0 10px rgba(0, 0, 0, 0.1)",
-                  }}
-                >
-                  <div className="form-group mb-3">
-                    <label htmlFor="email">Email</label>
-                    <input
-                      type="email"
-                      placeholder="email"
-                      className="form-control"
-                      required
-                      onChange={(e) => setEmail(e.target.value)}
-                      value={email}
-                    />
-                  </div>
 
-                  <div className="form-group mb-3">
-                    <label htmlFor="password">Password</label>
-                    <input
-                      type="password"
-                      placeholder="password"
-                      className="form-control"
-                      required
-                      onChange={(e) => setPassword(e.target.value)}
-                      value={password}
-                    />
-                  </div>
-
-                  <div className="form-group mb-3">
-                    <label htmlFor="contact">Contact</label>
-                    <input
-                      type="text"
-                      placeholder="contact"
-                      className="form-control"
-                      required
-                      onChange={(e) => setContact(e.target.value)}
-                      value={contact}
-                    />
-                  </div>
-
-                  <div className="form-group mb-3">
-                    <label htmlFor="userType">User Type</label>
-                    <select
-                      className="form-control"
-                      required
-                      onChange={(e) => setUserType(e.target.value)}
-                      value={userType}
-                    >
-                      <option value="Passenger">Passenger</option>
-                      <option value="Driver">Driver</option>
-                    </select>
-                  </div>
-
-                  <div className="text-center">
-                    <button type="submit" className="btn btn-primary">
-                      Register
-                    </button>
-                  </div>
-                </form>
-              </div>
+            <div className="form-group mb-3">
+              <label htmlFor="password">Password</label>
+              <input
+                type="password"
+                placeholder="password"
+                className="form-control"
+                required
+                onChange={(e) => setPassword(e.target.value)}
+                value={password}
+              />
             </div>
-          </div>
-        </section>
+
+            <div className="form-group mb-3">
+              <label htmlFor="contact">Contact</label>
+              <input
+                type="text"
+                placeholder="contact"
+                className="form-control"
+                required
+                onChange={(e) => setContact(e.target.value)}
+                value={contact}
+              />
+            </div>
+
+            <div className="form-group mb-3">
+              <label htmlFor="userType">User Type</label>
+              <select
+                className="form-control"
+                required
+                onChange={(e) => setUserType(e.target.value)}
+                value={userType}
+              >
+                <option value="Passenger">Passenger</option>
+              </select>
+            </div>
+
+            <div className="text-center">
+              <button type="submit" className="btn btn-primary">
+                Register
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
