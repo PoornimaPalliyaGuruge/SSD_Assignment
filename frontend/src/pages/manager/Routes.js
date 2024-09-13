@@ -487,8 +487,24 @@ const Routes = () => {
   const [end, setEnd] = useState('');
   const [fee, setFee] = useState('');
   const [selectedRoutesID, setselectedRoutesID] = useState(null);
+  const [csrfToken, setCsrfToken] = useState('');  // CSRF token state
 
   const API_URL = process.env.REACT_APP_API_URL;
+  
+  useEffect(() => {
+    // Fetch CSRF token
+    axios.get(`${API_URL}/csrf-token`, { withCredentials: true })
+      .then(response => {
+        setCsrfToken(response.data.csrfToken);
+      })
+      .catch(error => console.error('Error fetching CSRF token:', error));
+     
+    // Fetch routes data from your backend API
+    fetch(`${API_URL}/roots`)  // Corrected the typo here, no extra backticks needed
+      .then(response => response.json())
+      .then(data => setRoutess(data))
+      .catch(error => console.error('Error fetching routes:', error));
+  }, [API_URL]);
 
   ///donwload schedule
   const downloadSchedule = () => {
@@ -512,18 +528,6 @@ const Routes = () => {
   };
 
 
-  /************Update the code ************/
-  useEffect(() => {
-    // Fetch drivers data from your backend API
-    fetch(`${API_URL}/roots```)
-        .then((response) => response.json())
-        .then((data) => setRoutess(data))
-        .catch((error) => console.error('Error fetching drivers:', error));
-  }, []);
-
-
-
-
   /************Add New Routee ************/
   const handleAddRoute = () => {
     const newRoute = {
@@ -536,7 +540,8 @@ const Routes = () => {
     axios.post(`${API_URL}/roots`, newRoute, {
       headers: {
         'Content-Type': 'application/json',
-      },
+        'X-CSRF-TOKEN': csrfToken
+      },withCredentials: true, 
     })
         .then((response) => {
           if (response.status === 200) {
@@ -567,17 +572,22 @@ const Routes = () => {
   const handleEditClick = (routeId) => {
     setselectedRoutesID(routeId);
 
-    // Fetch driver details based on the routeId
-    fetch(`${API_URL}/roots/${routeId}`)
-        .then((response) => response.json())
-        .then((data) => {
-          setRouteNo(data.routeNo);
-          setStart(data.start);
-          setEnd(data.end);
-          setFee(data.fee);
+    // Fetch route details based on the routeId
+    fetch(`${API_URL}/roots/${routeId}`, { withCredentials: true })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`Error fetching route details: ${response.statusText}`);
+            }
+            return response.json();
         })
-        .catch((error) => console.error('Error fetching driver details:', error));
-  };
+        .then((data) => {
+            setRouteNo(data.routeNo);
+            setStart(data.start);
+            setEnd(data.end);
+            setFee(data.fee);
+        })
+        .catch((error) => console.error('Error fetching route details:', error));
+};
 
   const handleUpdateDriver = (e) => {
     e.preventDefault();
@@ -592,13 +602,16 @@ const Routes = () => {
       end,
       fee
 
-    };// Send the updated data to the server
+    };
+    // Send the updated data to the server
     fetch(`${API_URL}/roots/${routesId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrfToken,
       },
       body: JSON.stringify(updatedRoute),
+      credentials: 'include',
     })
         .then((response) => {
           if (response.status === 200) {
@@ -608,14 +621,15 @@ const Routes = () => {
             setEnd('');
             setFee('');
             setselectedRoutesID(null);
-            // Refresh the drivers data after updating
-            axios.get(`${API_URL}/roots`)
-                .then((response) => setRoutess(response.data))
-                .catch((error) => console.error('Error fetching drivers:', error));
+            // Refresh the routes data after updating
+            return axios.get(`${API_URL}/roots`, { withCredentials: true });
           } else {
-            console.error('Failed to update driver');
+              console.error(`Failed to update route: ${response.status} - ${response.statusText}`);
+              return Promise.reject(response);
           }
-        }).catch((error) => console.error('Error updating driver:', error));
+      })
+      .then((response) => setRoutess(response.data))
+      .catch((error) => console.error('Error updating route:', error));
   };
 
 
@@ -630,6 +644,11 @@ const Routes = () => {
       // Send a request to delete the selected driver
       fetch(`${API_URL}/roots/${selectedRoutesID}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-TOKEN': csrfToken,// Include CSRF token in the header
+        },
+        credentials: 'include',
       })
           .then((response) => {
             if (response.status === 200) {
