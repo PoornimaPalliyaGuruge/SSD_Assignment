@@ -497,8 +497,8 @@ import axios from 'axios';
 const API_URL = process.env.REACT_APP_API_URL;
 
 const Driver = () => {
-
     const [drivers, setDrivers] = useState([]);
+    const [csrfToken, setCsrfToken] = useState('');// CSRF token state
     const [name, setName] = useState('');
     const [contact, setContact] = useState('');
     const [age, setAge] = useState('');
@@ -506,6 +506,34 @@ const Driver = () => {
     const [licenceNo, setLicenceNo] = useState('');
     const [selectedDriverId, setSelectedDriverId] = useState(null);
 
+    useEffect(() => {
+        const fetchInitialData = async () => {
+            try {
+                // Fetch CSRF token
+                const csrfResponse = await axios.get(`${API_URL}/csrf-token`, { withCredentials: true });
+                setCsrfToken(csrfResponse.data.csrfToken);
+                console.log('CSRF Token fetched:', csrfResponse.data.csrfToken);  // Check if token is fetched
+    
+                // Fetch drivers data
+                const driversResponse = await axios.get(`${API_URL}/drivers`, { withCredentials: true });
+                setDrivers(driversResponse.data);
+            } catch (error) {
+                console.error('Error fetching initial data:', error);
+            }
+        };
+    
+        fetchInitialData();
+    }, []);
+    
+
+    const fetchDrivers = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/drivers`, { withCredentials: true });
+            setDrivers(response.data);
+        } catch (error) {
+            console.error('Error fetching drivers:', error);
+        }
+    };
     const downloadSchedule = () => {
         const scheduleCSV = drivers.map(item => (
             `${item.name}, ${item.contact}, ${item.age}, ${item.address}, ${item.licenceNo}`
@@ -522,114 +550,112 @@ const Driver = () => {
         document.body.removeChild(a);
     };
 
-    useEffect(() => {
-        fetch(`${API_URL}/drivers`)
-            .then(response => response.json())
-            .then(data => setDrivers(data))
-            .catch(error => console.error('Error fetching drivers:', error));
-    }, []);
-
-    const handleAddDriver = () => {
-        const newDriver = {
-            name,
-            contact,
-            age,
-            address,
-            licenceNo,
-        };
-
-        axios.post(`${API_URL}/drivers`, newDriver, {
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        })
-            .then(response => {
-                if (response.status === 200) {
-                    setName('');
-                    setContact('');
-                    setAge('');
-                    setAddress('');
-                    setLicenceNo('');
-                    axios.get(`${API_URL}/drivers`)
-                        .then(response => setDrivers(response.data))
-                        .catch(error => console.error('Error fetching drivers:', error));
-                } else {
-                    console.error('Failed to add driver');
-                }
-            })
-            .catch(error => console.error('Error adding driver:', error));
-    };
-
-    const handleEditClick = (driverId) => {
-        setSelectedDriverId(driverId);
-        fetch(`${API_URL}/drivers/${driverId}`)
-            .then(response => response.json())
-            .then(data => {
-                setName(data.name);
-                setAge(data.age);
-                setAddress(data.address);
-                setContact(data.contact);
-                setLicenceNo(data.licenceNo);
-            })
-            .catch(error => console.error('Error fetching driver details:', error));
-    };
-
-    const handleUpdateDriver = (e) => {
+    const handleAddDriver = async (e) => {
         e.preventDefault();
-        const driverId = selectedDriverId;
-        const updatedDriver = {
-            name,
-            age,
-            address,
-            contact,
-            licenceNo,
-        };
-        fetch(`${API_URL}/drivers/${driverId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(updatedDriver),
-        })
-            .then(response => {
-                if (response.status === 200) {
-                    setName('');
-                    setAge('');
-                    setAddress('');
-                    setContact('');
-                    setLicenceNo('');
-                    setSelectedDriverId(null);
-                    axios.get(`${API_URL}/drivers`)
-                        .then(response => setDrivers(response.data))
-                        .catch(error => console.error('Error fetching drivers:', error));
-                } else {
-                    console.error('Failed to update driver');
-                }
-            })
-            .catch(error => console.error('Error updating driver:', error));
+        console.log('handleAddDriver called');
+        
+        const newDriver = { name, contact, age, address, licenceNo };
+        console.log('CSRF Token before POST request:', csrfToken);  // Log the token
+    
+        try {
+            const response = await axios.post(`${API_URL}/drivers`, newDriver, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,  // Pass CSRF token here
+                }, withCredentials: true, 
+            });
+            
+            console.log('Response received:', response);
+            if (response.status === 200) {
+                resetForm();
+                fetchDrivers();
+                console.log('Success: Driver added');
+            } else {
+                console.error('Failed to add driver');
+            }
+        } catch (error) {
+            console.error('Error adding driver:', error.response ? error.response.data : error.message);
+        }
     };
+    
+    
+    
+
+    const handleEditClick = async (driverId) => {
+        setSelectedDriverId(driverId);
+        try {
+            const response = await axios.get(`${API_URL}/drivers/${driverId}`);
+            const data = response.data;
+            setName(data.name);
+            setAge(data.age);
+            setAddress(data.address);
+            setContact(data.contact);
+            setLicenceNo(data.licenceNo);
+        } catch (error) {
+            console.error('Error fetching driver details:', error);
+        }
+    };
+
+    const handleUpdateDriver = async (e) => {
+        e.preventDefault();  // Prevent form submission from reloading the page
+        if (!selectedDriverId) return;
+    
+        const updatedDriver = { name, age, address, contact, licenceNo };
+    
+        try {
+            const response = await axios.put(`${API_URL}/drivers/${selectedDriverId}`, updatedDriver, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,  // Pass the CSRF token
+                },withCredentials: true,
+            });
+            
+    
+            if (response.status === 200) {
+                resetForm();
+                fetchDrivers();
+            } else {
+                console.error('Failed to update driver');
+            }
+        } catch (error) {
+            console.error('Error updating driver:', error);
+        }
+    };
+    
 
     const handleDeleteClick = (driverId) => {
         setSelectedDriverId(driverId);
     };
 
-    const handleDeleteDriver = () => {
-        if (selectedDriverId) {
-            fetch(`${API_URL}/drivers/${selectedDriverId}`, {
-                method: 'DELETE',
-            })
-                .then(response => {
-                    if (response.status === 200) {
-                        setSelectedDriverId(null);
-                        axios.get(`${API_URL}/drivers`)
-                            .then(response => setDrivers(response.data))
-                            .catch(error => console.error('Error fetching drivers:', error));
-                    } else {
-                        console.error('Failed to delete driver');
-                    }
-                })
-                .catch(error => console.error('Error deleting driver:', error));
+    const handleDeleteDriver = async () => {
+        if (!selectedDriverId) return;
+    
+        try {
+            const response = await axios.delete(`${API_URL}/drivers/${selectedDriverId}`, {
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,  // Pass the CSRF token
+                },withCredentials: true,
+            });
+    
+            if (response.status === 200) {
+                setSelectedDriverId(null);
+                fetchDrivers();
+            } else {
+                console.error('Failed to delete driver');
+            }
+        } catch (error) {
+            console.error('Error deleting driver:', error);
         }
+    };
+    
+
+    const resetForm = () => {
+        setName('');
+        setContact('');
+        setAge('');
+        setAddress('');
+        setLicenceNo('');
+        setSelectedDriverId(null);
     };
 
     return (
@@ -751,72 +777,80 @@ const Driver = () => {
             <div id="addEmployeeModal" className="modal fade">
                 <div className="modal-dialog">
                     <div className="modal-content">
-                        <form onSubmit={handleAddDriver}>
-                            <div className="modal-header">
-                                <h4 className="modal-title">Add Driver</h4>
-                                <button
-                                    type="button"
-                                    className="close"
-                                    data-dismiss="modal"
-                                    aria-hidden="true"
-                                >
-                                    ×
-                                </button>
-                            </div>
-                            <div className="modal-body">
-                                <div className="form-group">
-                                    <label>Name</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        required
-                                        value={name}
-                                        onChange={e => setName(e.target.value)} />
-                                </div>
-                                <div className="form-group">
-                                    <label>Age</label>
-                                    <input
-                                        type="number"
-                                        className="form-control"
-                                        required
-                                        value={age}
-                                        onChange={e => setAge(e.target.value)} />
-                                </div>
-                                <div className="form-group">
-                                    <label>Address</label>
-                                    <textarea
-                                        className="form-control"
-                                        required
-                                        value={address}
-                                        onChange={e => setAddress(e.target.value)}
-                                    />
-                                </div>
-                                <div className="form-group">
-                                    <label>Phone</label>
-                                    <input type="text" className="form-control" required
-                                           value={contact}
-                                           onChange={e => setContact(e.target.value)} />
-                                </div>
-                                <div className="form-group">
-                                    <label>Licence No</label>
-                                    <input type="text" className="form-control" required value={licenceNo}
-                                           onChange={e => setLicenceNo(e.target.value)} />
-                                </div>
-                            </div>
-                            <div className="modal-footer">
-                                <input
-                                    type="button"
-                                    className="btn btn-default"
-                                    data-dismiss="modal"
-                                    value="Cancel"
-                                />
-                                <input
-                                    type="submit"
-                                    className="btn btn-success"
-                                    value="Add"
-                                />
-                            </div>
-                        </form>
+                    <form onSubmit={handleAddDriver}>  {/* Change onClick to onSubmit */}
+    <div className="modal-header">
+        <h4 className="modal-title">Add Driver</h4>
+        <button
+            type="button"
+            className="close"
+            data-dismiss="modal"
+            aria-hidden="true"
+        >
+            ×
+        </button>
+    </div>
+    <div className="modal-body">
+        <div className="form-group">
+            <label>Name</label>
+            <input
+                type="text"
+                className="form-control"
+                required
+                value={name}
+                onChange={e => setName(e.target.value)} />
+        </div>
+        <div className="form-group">
+            <label>Age</label>
+            <input
+                type="number"
+                className="form-control"
+                required
+                value={age}
+                onChange={e => setAge(e.target.value)} />
+        </div>
+        <div className="form-group">
+            <label>Address</label>
+            <textarea
+                className="form-control"
+                required
+                value={address}
+                onChange={e => setAddress(e.target.value)}
+            />
+        </div>
+        <div className="form-group">
+            <label>Phone</label>
+            <input
+                type="text"
+                className="form-control"
+                required
+                value={contact}
+                onChange={e => setContact(e.target.value)} />
+        </div>
+        <div className="form-group">
+            <label>Licence No</label>
+            <input
+                type="text"
+                className="form-control"
+                required
+                value={licenceNo}
+                onChange={e => setLicenceNo(e.target.value)} />
+        </div>
+    </div>
+    <div className="modal-footer">
+        <input
+            type="button"
+            className="btn btn-default"
+            data-dismiss="modal"
+            value="Cancel"
+        />
+        <input
+            type="submit"
+            className="btn btn-success"
+            value="Add"
+        />
+    </div>
+</form>
+
                     </div>
                 </div>
             </div>
