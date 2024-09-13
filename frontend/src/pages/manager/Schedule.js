@@ -293,22 +293,31 @@ const Schedule = () => {
     const [scheduleData, setScheduleData] = useState([]); // Store data for the selected day
     const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State to control the edit modal
     const [selectedDriverId, setSelectedDriverId] = useState(null);
+    const [csrfToken, setCsrfToken] = useState('');  // CSRF token state
 
     const [bus, setBus] = useState('');
     const [driver, setDriver] = useState('');
     const [routeNo, setRouteNo] = useState('');
     const [status, setStatus] = useState('');
-
+    
     useEffect(() => {
-        // Make an API call based on the active day
+        // Fetch CSRF token
+        axios.get(`${API_URL}/csrf-token`, { withCredentials: true })
+            .then(response => {
+                setCsrfToken(response.data.csrfToken); // Save CSRF token
+            })
+            .catch(error => console.error('Error fetching CSRF token:', error));
+    
+        // Fetch schedule data based on active day
         axios.get(`${API_URL}/${activeDay.toLowerCase()}`)
             .then((response) => {
-                setScheduleData(response.data);
+                setScheduleData(response.data); // Update state with schedule data
             })
             .catch((error) => {
-                console.error('Error fetching schedule data:', error);
+                console.error('Error fetching schedule data:', error); // Log error
             });
-    }, [activeDay]);
+    
+    }, [API_URL, activeDay]);
 
     // Editing function
     const handleEdit = (id) => {
@@ -341,6 +350,7 @@ const Schedule = () => {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
             },
             body: JSON.stringify(updatedDriver),
         })
