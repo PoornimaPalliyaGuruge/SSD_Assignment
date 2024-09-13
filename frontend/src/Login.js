@@ -1,5 +1,6 @@
+import axios from "axios";
 import { appconfigs } from "./constant";
-import { useState } from "react";
+import { useState, useEffect } from 'react';
 import { useNavigate } from "react-router-dom";
 import { isEmail } from "validator"; // Import for validation
 
@@ -7,9 +8,19 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(""); // For error handling
+  const [csrfToken, setCsrfToken] = useState("");// CSRF token state
   const navigation = useNavigate();
 
   const API_URL = process.env.REACT_APP_API_URL
+
+  useEffect(() => {
+    // Fetch CSRF token
+    axios.get(`${API_URL}/csrf-token`, { withCredentials: true })
+      .then(response => {
+        setCsrfToken(response.data.csrfToken);
+      })
+      .catch(error => console.error('Error fetching CSRF token:', error));
+  }, [API_URL]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,7 +42,9 @@ const Login = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,  // Include CSRF token in the header
         },
+        credentials: 'include', // Include cookies in the request
         body: JSON.stringify({ email, password }),
       });
 
