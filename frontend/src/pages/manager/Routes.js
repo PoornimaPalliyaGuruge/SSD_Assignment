@@ -477,7 +477,7 @@
 import Header from "../../components/Header";
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-
+import DOMPurify from 'dompurify';  // Import DOMPurify to sanitize input
 
 const Routes = () => {
 
@@ -500,11 +500,22 @@ const Routes = () => {
       .catch(error => console.error('Error fetching CSRF token:', error));
      
     // Fetch routes data from your backend API
-    fetch(`${API_URL}/roots`)  // Corrected the typo here, no extra backticks needed
+    fetch(`${API_URL}/roots`)
       .then(response => response.json())
-      .then(data => setRoutess(data))
+      .then(data => {
+        // Sanitize fetched data before setting it in the state
+        const sanitizedRoutes = data.map(route => ({
+          ...route,
+          routeNo: DOMPurify.sanitize(route.routeNo),
+          start: DOMPurify.sanitize(route.start),
+          end: DOMPurify.sanitize(route.end),
+          fee: DOMPurify.sanitize(route.fee),
+        }));
+        setRoutess(sanitizedRoutes);
+      })
       .catch(error => console.error('Error fetching routes:', error));
   }, [API_URL]);
+
 
   ///donwload schedule
   const downloadSchedule = () => {
@@ -530,11 +541,12 @@ const Routes = () => {
 
   /************Add New Routee ************/
   const handleAddRoute = () => {
+    // Sanitize the input before sending to the server
     const newRoute = {
-      routeNo,
-      start,
-      end,
-      fee
+      routeNo: DOMPurify.sanitize(routeNo),
+      start: DOMPurify.sanitize(start),
+      end: DOMPurify.sanitize(end),
+      fee: DOMPurify.sanitize(fee)
     };
 
     axios.post(`${API_URL}/roots`, newRoute, {
@@ -581,10 +593,11 @@ const Routes = () => {
             return response.json();
         })
         .then((data) => {
-            setRouteNo(data.routeNo);
-            setStart(data.start);
-            setEnd(data.end);
-            setFee(data.fee);
+           // Sanitize fetched route data
+        setRouteNo(DOMPurify.sanitize(data.routeNo));
+        setStart(DOMPurify.sanitize(data.start));
+        setEnd(DOMPurify.sanitize(data.end));
+        setFee(DOMPurify.sanitize(data.fee));
         })
         .catch((error) => console.error('Error fetching route details:', error));
 };
@@ -595,14 +608,14 @@ const Routes = () => {
     // Use selectedRoutesID to identify the driver you want to update
     const routesId = selectedRoutesID;
 
-    // Prepare the updated driver data
+    // Prepare the updated route data, sanitize input
     const updatedRoute = {
-      routeNo,
-      start,
-      end,
-      fee
-
+      routeNo: DOMPurify.sanitize(routeNo),
+      start: DOMPurify.sanitize(start),
+      end: DOMPurify.sanitize(end),
+      fee: DOMPurify.sanitize(fee)
     };
+    
     // Send the updated data to the server
     fetch(`${API_URL}/roots/${routesId}`, {
       method: 'PUT',
