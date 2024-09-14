@@ -493,6 +493,7 @@
 import Header from "../../components/Header";
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import DOMPurify from 'dompurify';  // Import DOMPurify for sanitization
 
 const API_URL = process.env.REACT_APP_API_URL;
 
@@ -505,6 +506,8 @@ const Driver = () => {
     const [address, setAddress] = useState('');
     const [licenceNo, setLicenceNo] = useState('');
     const [selectedDriverId, setSelectedDriverId] = useState(null);
+    const sanitizedAddress = DOMPurify.sanitize(address);
+
 
     useEffect(() => {
         const fetchInitialData = async () => {
@@ -514,9 +517,16 @@ const Driver = () => {
                 setCsrfToken(csrfResponse.data.csrfToken);
                 console.log('CSRF Token fetched:', csrfResponse.data.csrfToken);  // Check if token is fetched
     
-                // Fetch drivers data
+                // Fetch drivers data and sanitize it
                 const driversResponse = await axios.get(`${API_URL}/drivers`, { withCredentials: true });
-                setDrivers(driversResponse.data);
+                const sanitizedDrivers = driversResponse.data.map(driver => ({
+                    ...driver,
+                    name: DOMPurify.sanitize(driver.name),  // Sanitize dynamic data
+                    contact: DOMPurify.sanitize(driver.contact),
+                    address: DOMPurify.sanitize(driver.address),
+                    licenceNo: DOMPurify.sanitize(driver.licenceNo),
+                }));
+                setDrivers(sanitizedDrivers);
             } catch (error) {
                 console.error('Error fetching initial data:', error);
             }
@@ -529,7 +539,14 @@ const Driver = () => {
     const fetchDrivers = async () => {
         try {
             const response = await axios.get(`${API_URL}/drivers`, { withCredentials: true });
-            setDrivers(response.data);
+            const sanitizedDrivers = response.data.map(driver => ({
+                ...driver,
+                name: DOMPurify.sanitize(driver.name),
+                contact: DOMPurify.sanitize(driver.contact),
+                address: DOMPurify.sanitize(driver.address),
+                licenceNo: DOMPurify.sanitize(driver.licenceNo),
+            }));
+            setDrivers(sanitizedDrivers);
         } catch (error) {
             console.error('Error fetching drivers:', error);
         }
@@ -553,8 +570,16 @@ const Driver = () => {
     const handleAddDriver = async (e) => {
         e.preventDefault();
         console.log('handleAddDriver called');
+
+         // Sanitize user input before sending
+         const newDriver = {
+            name: DOMPurify.sanitize(name),
+            contact: DOMPurify.sanitize(contact),
+            age: DOMPurify.sanitize(age),
+            address: DOMPurify.sanitize(address),
+            licenceNo: DOMPurify.sanitize(licenceNo)
+        };
         
-        const newDriver = { name, contact, age, address, licenceNo };
         console.log('CSRF Token before POST request:', csrfToken);  // Log the token
     
         try {
@@ -586,11 +611,14 @@ const Driver = () => {
         try {
             const response = await axios.get(`${API_URL}/drivers/${driverId}`);
             const data = response.data;
-            setName(data.name);
-            setAge(data.age);
-            setAddress(data.address);
-            setContact(data.contact);
-            setLicenceNo(data.licenceNo);
+
+            // Sanitize the response data before updating the state
+            setName(DOMPurify.sanitize(data.name));
+            setAge(DOMPurify.sanitize(data.age));
+            setAddress(DOMPurify.sanitize(data.address));
+            setContact(DOMPurify.sanitize(data.contact));
+            setLicenceNo(DOMPurify.sanitize(data.licenceNo));
+
         } catch (error) {
             console.error('Error fetching driver details:', error);
         }
@@ -600,7 +628,13 @@ const Driver = () => {
         e.preventDefault();  // Prevent form submission from reloading the page
         if (!selectedDriverId) return;
     
-        const updatedDriver = { name, age, address, contact, licenceNo };
+        const updatedDriver = {
+            name: DOMPurify.sanitize(name),
+            age: DOMPurify.sanitize(age),
+            address: DOMPurify.sanitize(address),
+            contact: DOMPurify.sanitize(contact),
+            licenceNo: DOMPurify.sanitize(licenceNo),
+        };
     
         try {
             const response = await axios.put(`${API_URL}/drivers/${selectedDriverId}`, updatedDriver, {
@@ -656,6 +690,10 @@ const Driver = () => {
         setAddress('');
         setLicenceNo('');
         setSelectedDriverId(null);
+    };
+      // Render the sanitized address using dangerouslySetInnerHTML
+      const renderAddress = (sanitizedAddress) => {
+        return <div dangerouslySetInnerHTML={{ __html: sanitizedAddress }} />;
     };
 
     return (
