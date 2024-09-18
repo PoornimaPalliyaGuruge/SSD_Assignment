@@ -159,11 +159,9 @@ const Register = () => {
 
   const API_URL = process.env.REACT_APP_API_URL
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    console.log(API_URL)
     if (!isEmail(email)) {
       setError("Invalid email format");
       return;
