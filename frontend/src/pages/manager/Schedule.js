@@ -285,6 +285,7 @@
 import Header from "../../components/Header";
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import DOMPurify from 'dompurify';  // Import DOMPurify to sanitize input
 
 const API_URL = process.env.REACT_APP_API_URL
 
@@ -293,22 +294,38 @@ const Schedule = () => {
     const [scheduleData, setScheduleData] = useState([]); // Store data for the selected day
     const [isEditModalOpen, setIsEditModalOpen] = useState(false); // State to control the edit modal
     const [selectedDriverId, setSelectedDriverId] = useState(null);
+    const [csrfToken, setCsrfToken] = useState('');  // CSRF token state
 
     const [bus, setBus] = useState('');
     const [driver, setDriver] = useState('');
     const [routeNo, setRouteNo] = useState('');
     const [status, setStatus] = useState('');
-
+    
     useEffect(() => {
-        // Make an API call based on the active day
+        // Fetch CSRF token
+        axios.get(`${API_URL}/csrf-token`, { withCredentials: true })
+            .then(response => {
+                setCsrfToken(response.data.csrfToken); // Save CSRF token
+            })
+            .catch(error => console.error('Error fetching CSRF token:', error));
+    
+        // Fetch schedule data based on active day
         axios.get(`${API_URL}/${activeDay.toLowerCase()}`)
             .then((response) => {
-                setScheduleData(response.data);
+               const sanitizedSchedule = response.data.map(item =>({
+                ...item,
+                bus: DOMPurify.sanitize(item.bus),
+                driver: DOMPurify.sanitize(item.driver),
+                routeNo: DOMPurify.sanitize(item.routeNo),
+                status: DOMPurify.sanitize(item.status),
+               }));
+               setScheduleData(sanitizedSchedule); // Sanitize and update state
             })
             .catch((error) => {
-                console.error('Error fetching schedule data:', error);
+                console.error('Error fetching schedule data:', error); // Log error
             });
-    }, [activeDay]);
+    
+    }, [API_URL, activeDay]);
 
     // Editing function
     const handleEdit = (id) => {
@@ -319,10 +336,11 @@ const Schedule = () => {
         fetch(`${API_URL}/${activeDay.toLowerCase()}/${id}`)
             .then((response) => response.json())
             .then((data) => {
-                setDriver(data.driver);
-                setRouteNo(data.routeNo);
-                setBus(data.bus);
-                setStatus(data.status);
+                // Sanitize the input before setting state
+                setDriver(DOMPurify.sanitize(data.driver));
+                setRouteNo(DOMPurify.sanitize(data.routeNo));
+                setBus(DOMPurify.sanitize(data.bus));
+                setStatus(DOMPurify.sanitize(data.status));
             })
             .catch((error) => console.error('Error fetching driver details:', error));
     };
@@ -330,10 +348,10 @@ const Schedule = () => {
     const handleUpdateSchedule = (e) => {
         e.preventDefault();
         const updatedDriver = {
-            bus,
-            driver,
-            status,
-            routeNo
+            bus: DOMPurify.sanitize(bus),
+            driver: DOMPurify.sanitize(driver),
+            status: DOMPurify.sanitize(status),
+            routeNo: DOMPurify.sanitize(routeNo),
         };
 
         // Send the updated data to the server
@@ -341,6 +359,7 @@ const Schedule = () => {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
             },
             body: JSON.stringify(updatedDriver),
         })
@@ -353,10 +372,19 @@ const Schedule = () => {
                     setDriver('');
                     setIsEditModalOpen(false); // Close modal after saving
 
-                    // Refresh the schedule data after updating
-                    axios.get(`${API_URL}/${activeDay.toLowerCase()}`)
-                        .then((response) => setScheduleData(response.data))
-                        .catch((error) => console.error('Error fetching drivers:', error));
+                     // Refresh the schedule data after updating
+                     axios.get(`${API_URL}/${activeDay.toLowerCase()}`)
+                     .then((response) => {
+                         const sanitizedSchedule = response.data.map(item => ({
+                             ...item,
+                             bus: DOMPurify.sanitize(item.bus),
+                             driver: DOMPurify.sanitize(item.driver),
+                             routeNo: DOMPurify.sanitize(item.routeNo),
+                             status: DOMPurify.sanitize(item.status),
+                         }));
+                         setScheduleData(sanitizedSchedule);
+                     })
+                     .catch((error) => console.error('Error fetching schedule data:', error));
                 } else {
                     console.error('Failed to update driver');
                 }
