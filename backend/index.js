@@ -171,7 +171,7 @@ const credentials = {
 
 
 const corsOptions = {
-  origin: "https://localhost:3000", // Allow requests from frontend
+  origin: "http://localhost:3000", // Allow requests from frontend
   methods: ["GET", "POST", "PUT", "DELETE"], // Allow these methods
   allowedHeaders: ["Content-Type"], // Allow these headers
   credentials: true // Allow cookies if needed
@@ -221,12 +221,12 @@ app.use("/api/friday", fridayRoute.routes);
 app.use("/api/thursday", thursdayRoute.routes);
 app.use("/api/user", userRoute.routes);
 
-// app.listen(config.port, () =>
-//     console.log("App is listening on url https://localhost:" + config.port)
-// );
+app.listen(config.port, () =>
+    console.log("App is listening on url http://localhost:" + config.port)
+);
 
 
-// Create an HTTPS server
-https.createServer(credentials, app).listen(config.port, () => {
-  console.log("App is listening on url https://localhost:" + config.port);
-});
+// // Create an HTTPS server
+// https.createServer(credentials, app).listen(config.port, () => {
+//   console.log("App is listening on url https://localhost:" + config.port);
+// });
