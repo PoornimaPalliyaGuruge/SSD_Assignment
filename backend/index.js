@@ -136,6 +136,10 @@
 
 "use strict";
 
+// Using https
+const https = require('https');
+const fs = require('fs');
+
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -151,10 +155,26 @@ const thursdayRoute = require("./routes/thursday-route");
 const fridayRoute = require("./routes/friday-routes");
 const userRoute = require("./routes/user-routes");
 
+
+
+// Define paths to your certificate files
+const privateKey = fs.readFileSync('./certs/private-key.pem', 'utf8');
+const certificate = fs.readFileSync('./certs/certificate.pem', 'utf8');
+// Optionally include CA bundle if provided
+// const ca = fs.readFileSync('path/to/ca_bundle.crt', 'utf8');
+
+const credentials = {
+  key: privateKey,
+  cert: certificate,
+  // ca: ca // Uncomment if you have a CA bundle
+};
+
+
 const corsOptions = {
-  origin: "http://localhost:3000", // Allow requests from frontend
+  origin: "https://localhost:3000", // Allow requests from frontend
   methods: ["GET", "POST", "PUT", "DELETE"], // Allow these methods
   allowedHeaders: ["Content-Type"], // Allow these headers
+  credentials: true // Allow cookies if needed
 };
 
 const app = express();
@@ -201,7 +221,12 @@ app.use("/api/friday", fridayRoute.routes);
 app.use("/api/thursday", thursdayRoute.routes);
 app.use("/api/user", userRoute.routes);
 
-app.listen(config.port, () =>
-    console.log("App is listening on url http://localhost:" + config.port)
-);
+// app.listen(config.port, () =>
+//     console.log("App is listening on url https://localhost:" + config.port)
+// );
 
+
+// Create an HTTPS server
+https.createServer(credentials, app).listen(config.port, () => {
+  console.log("App is listening on url https://localhost:" + config.port);
+});

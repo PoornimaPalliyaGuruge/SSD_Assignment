@@ -515,7 +515,7 @@ const Routes = () => {
   /************Update the code ************/
   useEffect(() => {
     // Fetch drivers data from your backend API
-    fetch(`${API_URL}/roots```)
+    fetch(`${API_URL}/roots`)
         .then((response) => response.json())
         .then((data) => setRoutess(data))
         .catch((error) => console.error('Error fetching drivers:', error));
