@@ -9,7 +9,7 @@ const Login = () => {
   const [error, setError] = useState(""); // For error handling
   const navigation = useNavigate();
 
-  const API_URL = process.env.REACT_APP_API_URL
+  const API_URL = process.env.REACT_APP_API_URL;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,7 +39,7 @@ const Login = () => {
 
       if (response.ok) {
         console.log("Login successful");
-        localStorage.setItem("token", data.token); // Store the JWT token in localStorage
+        localStorage.setItem("token", data.token);
         navigation("/dashboard");
       } else {
         setError(data.message || "Login failed. Check your credentials.");
