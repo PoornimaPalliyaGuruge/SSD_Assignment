@@ -48,13 +48,24 @@ const Login = () => {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await response.json();
+      // Check if the response content type is JSON
+      const contentType = response.headers.get("content-type");
+
+      let data;
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        data = { message: await response.text() }; // Handle non-JSON responses
+      }
 
       if (response.ok) {
         console.log("Login successful");
         localStorage.setItem("token", data.token); // Store the JWT token in localStorage
         navigation("/dashboard");
-      } else {
+      } else if (response.status === 429) {
+        // Handle too many requests error (rate limit)
+        setError("Too many requests. Please try again later.");
+      }else {
         setError(data.message || "Login failed. Check your credentials.");
       }
     } catch (error) {
