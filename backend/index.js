@@ -147,6 +147,14 @@ const userRoute = require("./routes/user-routes");
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
 const app = express();
+const rateLimit = require("express-rate-limit");
+
+// Define the rate limiter for login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 3, // Limit each IP to 3 login attempts per windowMs
+  message: "Too many login attempts from this IP, please try again after 15 minutes"
+});
 
 // CORS configuration directly in app.use()
 app.use(cors({
@@ -208,6 +216,8 @@ app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken: req.csrfToken() });
 });
 
+// Apply the rate limiter to the login route
+app.use("/api/user/login", loginLimiter);
 // Define routes
 app.use("/api/buses", busRoutes.routes);
 app.use("/api/drivers", driverRoutes.routes);
