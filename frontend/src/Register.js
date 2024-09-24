@@ -198,7 +198,10 @@ const Register = () => {
       if (response.ok) {
         console.log("User registered successfully");
         navigate("/login");
-      } else {
+      } else if (response.status === 429) {
+        // Handle too many requests error (rate limit)
+        setError("Too many requests. Please try again later.");
+      }else {
         console.error("Registration failed");
       }
     } catch (error) {
