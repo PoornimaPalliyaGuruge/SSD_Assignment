@@ -216,6 +216,9 @@ const Register = () => {
       if (response.ok) {
         console.log("User registered successfully");
         navigate("/login");
+      }  else if (response.status === 400) {
+        // Handle too many requests error (rate limit)
+        setError("Email is already existing");
       } else {
         console.error("Registration failed");
       }
