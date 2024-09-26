@@ -132,7 +132,6 @@
 
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
 const helmet = require("helmet");
 const config = require("./config");
 const busRoutes = require("./routes/bus-routes");
@@ -146,15 +145,30 @@ const fridayRoute = require("./routes/friday-routes");
 const userRoute = require("./routes/user-routes");
 const csrf = require('csurf');
 const cookieParser = require('cookie-parser');
-const app = express();
 const rateLimit = require("express-rate-limit");
+const app = express();
+
+// Disable X-Powered-By header
+app.disable('x-powered-by');
+
+// Rate limiter: Apply to all requests
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Limit each IP to 200 requests per window
+  message: "Too many requests from this IP, please try again after 15 minutes"
+});
+
+// Apply global rate limiter to all requests
+app.use(globalLimiter);
 
 // Define the rate limiter for login
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 3, // Limit each IP to 3 login attempts per windowMs
+  max: 3, // Limit each IP to 3 login attempts per window
   message: "Too many login attempts from this IP, please try again after 15 minutes"
 });
+
+
 
 // CORS configuration directly in app.use()
 app.use(cors({
@@ -171,6 +185,7 @@ app.use(helmet.hsts({
   includeSubDomains: true,
   preload: true
 }));
+
 app.use(helmet.contentSecurityPolicy({
   useDefaults: true,
   directives: {
@@ -181,6 +196,7 @@ app.use(helmet.contentSecurityPolicy({
     connectSrc: ["'self'"]
   }
 }));
+
 app.use(helmet.frameguard({ action: 'deny' }));
 app.use(helmet.referrerPolicy({ policy: 'no-referrer' }));
 app.use(helmet.xssFilter());
@@ -195,20 +211,20 @@ const csrfProtection = csrf({ cookie: true });
 app.use(csrfProtection);
 
 app.use(express.json());
-app.use(bodyParser.json());
 
 // Middleware to log requests
 app.use((req, res, next) => {
-  console.log(req.path, req.method);
+  console.log(`${req.method} ${req.path}`);
   next();
 });
 
 // Middleware to handle CSRF token errors
 app.use((err, req, res, next) => {
   if (err.code === 'EBADCSRFTOKEN') {
+    console.error('Invalid CSRF token');
     return res.status(403).send('Invalid CSRF token');
   }
-  next();
+  next(err); // Pass other errors down to the default error handler
 });
 
 // Route to send CSRF token to frontend
@@ -218,6 +234,7 @@ app.get('/api/csrf-token', (req, res) => {
 
 // Apply the rate limiter to the login route
 app.use("/api/user/login", loginLimiter);
+
 // Define routes
 app.use("/api/buses", busRoutes.routes);
 app.use("/api/drivers", driverRoutes.routes);
